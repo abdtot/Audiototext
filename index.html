@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تحويل الصوت إلى نص - محلي</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
+        button { padding: 12px 24px; margin: 10px; font-size: 16px; cursor: pointer; }
+        #result { margin: 20px; padding: 15px; border: 1px solid #ccc; min-height: 50px; 
+                 border-radius: 8px; background: #f9f9f9; }
+        #status { margin: 15px; font-weight: bold; }
+        .permission-btn { background: #007bff; color: white; border: none; border-radius: 5px; }
+        .record-btn { background: #28a745; color: white; border: none; border-radius: 5px; }
+        .stop-btn { background: #dc3545; color: white; border: none; border-radius: 5px; }
+        .instructions { background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px; text-align: right; }
+    </style>
+</head>
+<body>
+    <h1>🎤 تحويل الكلام إلى نص عربي</h1>
+    
+    <div class="instructions">
+        <h3>📋 تعليمات مهمة:</h3>
+        <p>1. يجب فتح الموقع عبر خادم محلي (ليس ملف مباشر)</p>
+        <p>2. السماح بالإذن عندما يطلب المتصفح</p>
+        <p>3. استخدام Chrome أو Edge لأفضل نتائج</p>
+    </div>
+    
+    <button id="permissionBtn" class="permission-btn">🔓 فتح إعدادات الميكروفون</button>
+    <button id="startBtn" class="record-btn" disabled>🎙️ بدء التسجيل</button>
+    <button id="stopBtn" class="stop-btn" disabled>⏹ إيقاف التسجيل</button>
+    
+    <div id="status">⏳ جاهز للتسجيل - يرجى السماح بالوصول إلى الميكروفون</div>
+    <div id="result">📝 النص المعترف به سيظهر هنا...</div>
+
+    <script>
+        class ArabicSpeechToText {
+            constructor() {
+                this.recognition = null;
+                this.isSupported = false;
+                this.hasPermission = false;
+                this.checkSupport();
+            }
+
+            checkSupport() {
+                // التحقق من دعم API
+                this.isSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+                
+                if (!this.isSupported) {
+                    document.getElementById('status').innerHTML = 
+                        '❌ المتصفح لا يدعم التعرف على الكلام. يرجى استخدام Chrome أو Edge';
+                    return;
+                }
+                
+                document.getElementById('status').innerHTML = 
+                    '✅ المتصفح يدعم التعرف على الكلام - يرجى طلب الإذن';
+                this.initRecognition();
+            }
+
+            initRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SpeechRecognition();
+                
+                this.recognition.lang = 'ar-SA';
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+
+                this.recognition.onstart = () => {
+                    document.getElementById('status').innerHTML = '🎙️ جاري التسجيل... تحدث الآن!';
+                    document.getElementById('status').style.color = 'green';
+                };
+
+                this.recognition.onresult = (event) => {
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.innerHTML = 
+                        '<strong>النص النهائي:</strong><br>' + (finalTranscript || 'لا يوجد نص بعد') + 
+                        '<br><strong>جاري الكتابة:</strong><br><span style="color: gray;">' + interimTranscript + '</span>';
+                };
+
+                this.recognition.onend = () => {
+                    document.getElementById('status').innerHTML = '⏸️ توقف التسجيل';
+                    document.getElementById('status').style.color = 'blue';
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                };
+
+                this.recognition.onerror = (event) => {
+                    console.error('خطأ في التعرف:', event.error);
+                    this.handleError(event.error);
+                };
+            }
+
+            handleError(errorType) {
+                let errorMessage = '❌ ';
+                
+                switch(errorType) {
+                    case 'not-allowed':
+                    case 'permission-denied':
+                        errorMessage = 'تم رفض إذن الميكروفون. ';
+                        errorMessage += 'يرجى:<br>1. السماح بالوصول في نافذة الإذن<br>2. التحقق من إعدادات الميكروفون<br>3. إعادة تحميل الصفحة';
+                        this.hasPermission = false;
+                        document.getElementById('startBtn').disabled = true;
+                        document.getElementById('permissionBtn').disabled = false;
+                        break;
+                    case 'no-speech':
+                        errorMessage = 'لم يتم اكتشاف كلام. يرجى التحدث بصوت أعلى';
+                        break;
+                    case 'audio-capture':
+                        errorMessage = 'لا يوجد ميكروفون متصل أو لا يعمل';
+                        break;
+                    case 'network':
+                        errorMessage = 'مشكلة في الشبكة';
+                        break;
+                    default:
+                        errorMessage = 'حدث خطأ غير متوقع: ' + errorType;
+                }
+                
+                document.getElementById('status').innerHTML = errorMessage;
+                document.getElementById('status').style.color = 'red';
+            }
+
+            async requestPermission() {
+                try {
+                    document.getElementById('status').innerHTML = '⏳ يرجى السماح بالوصول إلى الميكروفون...';
+                    
+                    // طريقة أكثر فعالية لطلب الإذن
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        } 
+                    });
+                    
+                    // إغلاق الستريم مباشرة بعد الحصول على الإذن
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    this.hasPermission = true;
+                    document.getElementById('status').innerHTML = '✅ تم منح إذن الميكروفون! يمكنك البدء بالتسجيل';
+                    document.getElementById('status').style.color = 'green';
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('permissionBtn').style.display = 'none';
+                    
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في طلب الإذن:', error);
+                    this.handlePermissionError(error);
+                    return false;
+                }
+            }
+
+            handlePermissionError(error) {
+                let detailedMessage = '❌ فشل في الحصول على إذن الميكروفون: ';
+                
+                if (error.name === 'NotAllowedError') {
+                    detailedMessage += 'تم رفض الإذن من قبل المستخدم';
+                } else if (error.name === 'NotFoundError') {
+                    detailedMessage += 'لم يتم العثور على ميكروفون';
+                } else if (error.name === 'NotSupportedError') {
+                    detailedMessage += 'المتصفح لا يدعم الوصول إلى الميكروفون';
+                } else {
+                    detailedMessage += error.message;
+                }
+                
+                detailedMessage += '<br><br>🛠️ الحلول:<br>';
+                detailedMessage += '1. انقر على أيقونة القفل بجوار العنوان واسمح بالوصول<br>';
+                detailedMessage += '2. تحقق من إعدادات الميكروفون في المتصفح<br>';
+                detailedMessage += '3. تأكد من فتح الموقع عبر خادم محلي (ليس ملف مباشر)';
+                
+                document.getElementById('status').innerHTML = detailedMessage;
+            }
+
+            start() {
+                if (this.recognition && this.isSupported) {
+                    try {
+                        this.recognition.start();
+                        document.getElementById('startBtn').disabled = true;
+                        document.getElementById('stopBtn').disabled = false;
+                    } catch (error) {
+                        console.error('خطأ في بدء التسجيل:', error);
+                        document.getElementById('status').innerHTML = '❌ خطأ في بدء التسجيل: ' + error.message;
+                    }
+                } else {
+                    document.getElementById('status').innerHTML = '❌ النظام غير مدعوم أو غير مهيء';
+                }
+            }
+
+            stop() {
+                if (this.recognition) {
+                    this.recognition.stop();
+                }
+            }
+        }
+
+        // تهيئة التطبيق
+        const speechToText = new ArabicSpeechToText();
+
+        // إضافة event listeners
+        document.getElementById('permissionBtn').addEventListener('click', async () => {
+            await speechToText.requestPermission();
+        });
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            speechToText.start();
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            speechToText.stop();
+        });
+
+        // محاولة طلب الإذن تلقائياً عند التحميل
+        window.addEventListener('load', async () => {
+            // انتظر قليلاً ثم حاول طلب الإذن
+            setTimeout(async () => {
+                await speechToText.requestPermission();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
