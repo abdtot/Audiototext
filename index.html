@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الناطق - تحويل الكلام إلى نص عربي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --dark: #2b2d42;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+            background: white;
+            color: var(--primary);
+            padding: 15px;
+            border-radius: 50%;
+        }
+
+        .logo h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-header i {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            color: var(--dark);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary);
+            transform: scale(1.05);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #3aa8d0;
+            transform: scale(1.05);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e01a6f;
+            transform: scale(1.05);
+        }
+
+        .btn:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        .visualizer {
+            background: var(--dark);
+            border-radius: 12px;
+            height: 120px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .wave {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 90%;
+            height: 60%;
+        }
+
+        .bar {
+            width: 6px;
+            background: var(--success);
+            border-radius: 3px;
+        }
+
+        .recording .bar {
+            animation: wave 1.5s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { height: 20%; }
+            50% { height: 80%; }
+        }
+
+        .result-container {
+            height: 300px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        #result {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            min-height: 100%;
+        }
+
+        .interim {
+            color: var(--gray);
+            font-style: italic;
+        }
+
+        .final {
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+
+        .settings {
+            margin-top: 20px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .select {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            font-size: 1rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input {
+            width: 20px;
+            height: 20px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .actions .btn {
+            flex: 1;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status.ready {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status.recording {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .language-badge {
+            display: inline-block;
+            background: var(--secondary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        .auto-restart-info {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            color: #1565c0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-microphone-alt"></i>
+                <h1>الناطق</h1>
+            </div>
+            <p class="tagline">تحويل الكلام إلى نص عربي بدقة واحترافية - التسجيل المستمر</p>
+        </header>
+
+        <div class="app-container">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-record-vinyl"></i>
+                    <h2>التسجيل الصوتي المستمر</h2>
+                </div>
+                
+                <div class="controls">
+                    <div class="btn-group">
+                        <button id="startBtn" class="btn btn-primary">
+                            <i class="fas fa-microphone"></i> بدء التسجيل المستمر
+                        </button>
+                        <button id="stopBtn" class="btn btn-danger" disabled>
+                            <i class="fas fa-stop"></i> إيقاف التسجيل
+                        </button>
+                    </div>
+                    
+                    <div class="auto-restart-info">
+                        <i class="fas fa-info-circle"></i>
+                        التسجيل سيستمر تلقائياً حتى تضغط على إيقاف التسجيل
+                    </div>
+                    
+                    <div class="visualizer">
+                        <div class="wave">
+                            <div class="bar" style="animation-delay: 0s"></div>
+                            <div class="bar" style="animation-delay: 0.1s"></div>
+                            <div class="bar" style="animation-delay: 0.2s"></div>
+                            <div class="bar" style="animation-delay: 0.3s"></div>
+                            <div class="bar" style="animation-delay: 0.4s"></div>
+                            <div class="bar" style="animation-delay: 0.5s"></div>
+                            <div class="bar" style="animation-delay: 0.6s"></div>
+                            <div class="bar" style="animation-delay: 0.7s"></div>
+                            <div class="bar" style="animation-delay: 0.8s"></div>
+                            <div class="bar" style="animation-delay: 0.9s"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="status" class="status ready">
+                        <i class="fas fa-check-circle"></i> جاهز للبدء
+                    </div>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="wordCount">0</div>
+                            <div class="stat-label">كلمة</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="charCount">0</div>
+                            <div class="stat-label">حرف</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="timeCount">0</div>
+                            <div class="stat-label">ثانية</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-file-alt"></i>
+                    <h2>النص المعترف عليه</h2>
+                    <span class="language-badge">العربية</span>
+                </div>
+                
+                <div class="result-container">
+                    <div id="result">
+                        <p class="interim">سيظهر النص المعترف عليه هنا...</p>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button id="copyBtn" class="btn" disabled>
+                        <i class="fas fa-copy"></i> نسخ النص
+                    </button>
+                    <button id="clearBtn" class="btn" disabled>
+                        <i class="fas fa-trash"></i> مسح الكل
+                    </button>
+                    <button id="saveBtn" class="btn" disabled>
+                        <i class="fas fa-save"></i> حفظ النص
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cogs"></i>
+                <h2>الإعدادات</h2>
+            </div>
+            
+            <div class="settings">
+                <div class="setting-group">
+                    <label for="languageSelect">لغة التعرف:</label>
+                    <select id="languageSelect" class="select">
+                        <option value="ar-SA">العربية (السعودية)</option>
+                        <option value="ar-EG">العربية (مصر)</option>
+                        <option value="ar-AE">العربية (الإمارات)</option>
+                        <option value="ar-DZ">العربية (الجزائر)</option>
+                    </select>
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="interimResults" checked>
+                    <label for="interimResults">عرض النتائج المؤقتة أثناء الكلام</label>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>تم التطوير باستخدام Web Speech API &copy; 2023 الناطق - جميع الحقوق محفوظة</p>
+        </footer>
+    </div>
+
+    <script>
+        class ContinuousSpeechToText {
+            constructor() {
+                this.recognition = null;
+                this.isRecording = false;
+                this.finalTranscript = '';
+                this.interimTranscript = '';
+                this.startTime = null;
+                this.timerInterval = null;
+                this.autoRestartTimeout = null;
+                
+                this.initializeElements();
+                this.checkBrowserSupport();
+                this.setupEventListeners();
+            }
+            
+            initializeElements() {
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.copyBtn = document.getElementById('copyBtn');
+                this.clearBtn = document.getElementById('clearBtn');
+                this.saveBtn = document.getElementById('saveBtn');
+                this.statusDiv = document.getElementById('status');
+                this.resultDiv = document.getElementById('result');
+                this.visualizer = document.querySelector('.visualizer');
+                this.wave = document.querySelector('.wave');
+                this.wordCountEl = document.getElementById('wordCount');
+                this.charCountEl = document.getElementById('charCount');
+                this.timeCountEl = document.getElementById('timeCount');
+                this.languageSelect = document.getElementById('languageSelect');
+                this.interimResults = document.getElementById('interimResults');
+            }
+            
+            checkBrowserSupport() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    this.showError('المتصفح الحالي لا يدعم خاصية التعرف على الكلام. يرجى استخدام Chrome أو Edge');
+                    this.startBtn.disabled = true;
+                    return false;
+                }
+                return true;
+            }
+            
+            setupEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startRecording());
+                this.stopBtn.addEventListener('click', () => this.stopRecording());
+                this.copyBtn.addEventListener('click', () => this.copyToClipboard());
+                this.clearBtn.addEventListener('click', () => this.clearText());
+                this.saveBtn.addEventListener('click', () => this.saveText());
+                
+                this.languageSelect.addEventListener('change', () => {
+                    if (this.recognition) {
+                        this.recognition.lang = this.languageSelect.value;
+                    }
+                });
+            }
+            
+            initializeRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SpeechRecognition();
+                
+                this.recognition.lang = this.languageSelect.value;
+                this.recognition.continuous = true; // التسجيل المستمر
+                this.recognition.interimResults = this.interimResults.checked;
+                
+                this.recognition.onstart = () => {
+                    this.isRecording = true;
+                    this.updateUI('recording');
+                    this.startTimer();
+                    this.visualizer.classList.add('recording');
+                };
+                
+                this.recognition.onresult = (event) => {
+                    this.interimTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        
+                        if (event.results[i].isFinal) {
+                            this.finalTranscript += transcript + ' ';
+                        } else {
+                            this.interimTranscript += transcript;
+                        }
+                    }
+                    
+                    this.updateResult();
+                    this.updateStats();
+                };
+                
+                this.recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    
+                    if (event.error === 'not-allowed') {
+                        this.showError('تم رفض الوصول إلى الميكروفون. يرجى السماح بالوصول في إعدادات المتصفح');
+                        this.stopRecording();
+                    } else if (event.error === 'no-speech') {
+                        // لا نوقف التسجيل عند عدم اكتشاف كلام، نستمر في المحاولة
+                        console.log('لم يتم اكتشاف كلام، الاستمرار في التسجيل...');
+                    } else if (event.error === 'audio-capture') {
+                        this.showError('لا يمكن الوصول إلى الميكروفون. تأكد من توصيل الميكروفون');
+                        this.stopRecording();
+                    } else if (event.error === 'network') {
+                        this.showError('مشكلة في الشبكة. يرجى التحقق من اتصال الإنترنت');
+                        this.stopRecording();
+                    } else {
+                        // لأخطاء أخرى، نحاول إعادة التشغيل التلقائي
+                        console.warn('خطأ في التعرف، إعادة التشغيل التلقائي...', event.error);
+                        this.autoRestart();
+                    }
+                };
+                
+                this.recognition.onend = () => {
+                    // إذا كان التسجيل لا يزال مفعلاً، نعيد التشغيل تلقائياً
+                    if (this.isRecording) {
+                        console.log('إعادة تشغيل التسجيل تلقائياً...');
+                        this.autoRestart();
+                    }
+                };
+            }
+            
+            startRecording() {
+                if (!this.checkBrowserSupport()) return;
+                
+                this.initializeRecognition();
+                
+                try {
+                    this.recognition.start();
+                    console.log('بدء التسجيل المستمر...');
+                } catch (error) {
+                    this.showError(`تعذر بدء التسجيل: ${error.message}`);
+                }
+            }
+            
+            stopRecording() {
+                this.isRecording = false;
+                
+                if (this.recognition) {
+                    this.recognition.stop();
+                }
+                
+                if (this.autoRestartTimeout) {
+                    clearTimeout(this.autoRestartTimeout);
+                    this.autoRestartTimeout = null;
+                }
+                
+                this.updateUI('ready');
+                this.stopTimer();
+                this.visualizer.classList.remove('recording');
+                this.copyBtn.disabled = false;
+                this.clearBtn.disabled = false;
+                this.saveBtn.disabled = false;
+                
+                console.log('تم إيقاف التسجيل يدوياً');
+            }
+            
+            autoRestart() {
+                if (!this.isRecording) return;
+                
+                // تنظيف الإعتراف الحالي
+                if (this.recognition) {
+                    try {
+                        this.recognition.stop();
+                    } catch (e) {
+                        // تجاهل الأخطاء أثناء الإيقاف
+                    }
+                }
+                
+                // إعادة التشغيل بعد تأخير قصير
+                this.autoRestartTimeout = setTimeout(() => {
+                    if (this.isRecording) {
+                        console.log('إعادة تشغيل التسجيل...');
+                        this.initializeRecognition();
+                        this.recognition.start();
+                    }
+                }, 500);
+            }
+            
+            updateUI(state) {
+                switch(state) {
+                    case 'ready':
+                        this.statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> جاهز للبدء';
+                        this.statusDiv.className = 'status ready';
+                        this.startBtn.disabled = false;
+                        this.stopBtn.disabled = true;
+                        break;
+                    case 'recording':
+                        this.statusDiv.innerHTML = '<i class="fas fa-circle pulse"></i> جاري التسجيل المستمر... تحدث الآن';
+                        this.statusDiv.className = 'status recording';
+                        this.startBtn.disabled = true;
+                        this.stopBtn.disabled = false;
+                        break;
+                    case 'error':
+                        this.statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> حدث خطأ';
+                        this.statusDiv.className = 'status error';
+                        break;
+                }
+            }
+            
+            updateResult() {
+                let html = '';
+                
+                if (this.finalTranscript) {
+                    html += `<p class="final">${this.finalTranscript}</p>`;
+                }
+                
+                if (this.interimTranscript) {
+                    html += `<p class="interim">${this.interimTranscript}</p>`;
+                }
+                
+                if (!html) {
+                    html = '<p class="interim">سيظهر النص المعترف عليه هنا...</p>';
+                }
+                
+                this.resultDiv.innerHTML = html;
+                
+                // التمرير إلى الأسفل لرؤية أحدث النتائج
+                this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
+            }
+            
+            updateStats() {
+                const text = this.finalTranscript + this.interimTranscript;
+                const words = text.trim() ? text.trim().split(/\s+/) : [];
+                
+                this.wordCountEl.textContent = words.length;
+                this.charCountEl.textContent = text.length;
+            }
+            
+            startTimer() {
+                this.startTime = new Date();
+                this.timerInterval = setInterval(() => {
+                    const now = new Date();
+                    const seconds = Math.floor((now - this.startTime) / 1000);
+                    this.timeCountEl.textContent = seconds;
+                }, 1000);
+            }
+            
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+            
+            copyToClipboard() {
+                const textToCopy = this.finalTranscript || this.interimTranscript;
+                
+                if (!textToCopy.trim()) {
+                    this.showError('لا يوجد نص لنسخه');
+                    return;
+                }
+                
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        // إشعار بنجاح النسخ
+                        const originalText = this.copyBtn.innerHTML;
+                        this.copyBtn.innerHTML = '<i class="fas fa-check"></i> تم النسخ!';
+                        setTimeout(() => {
+                            this.copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        this.showError('فشل في نسخ النص: ' + err);
+                    });
+            }
+            
+            clearText() {
+                this.finalTranscript = '';
+                this.interimTranscript = '';
+                this.updateResult();
+                this.updateStats();
+                this.timeCountEl.textContent = '0';
+                this.copyBtn.disabled = true;
+                this.clearBtn.disabled = true;
+                this.saveBtn.disabled = true;
+            }
+            
+            saveText() {
+                const textToSave = this.finalTranscript || this.interimTranscript;
+                
+                if (!textToSave.trim()) {
+                    this.showError('لا يوجد نص لحفظه');
+                    return;
+                }
+                
+                const blob = new Blob([textToSave], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'النص-المعترف-عليه.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            showError(message) {
+                this.statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+                this.statusDiv.className = 'status error';
+                
+                // إخفاء الرسالة بعد 5 ثواني
+                setTimeout(() => {
+                    if (!this.isRecording) {
+                        this.updateUI('ready');
+                    }
+                }, 5000);
+            }
+        }
+        
+        // تهيئة التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            new ContinuousSpeechToText();
+        });
+    </script>
+</body>
+</html>
